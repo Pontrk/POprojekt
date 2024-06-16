@@ -11,19 +11,6 @@ public class Equipment {
         this.status = status;
     }
 
-    public void checkStatus() {
-        System.out.println("Sprzet " + typ + " jest w statusie: " + status);
-    }
-
-    public void reportIssue() {
-        System.out.println("Zgłoszenie problemu ze sprzetem " + typ);
-    }
-
-    public void repair() {
-        System.out.println("Naprawa sprzetu " + typ);
-        this.status = "sprawny";
-    }
-
     public int getIdSprzetu() {
         return idSprzetu;
     }
@@ -38,5 +25,14 @@ public class Equipment {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public boolean isBroken() {
+        return "uszkodzony".equals(status);
+    }
+
+    public void repair() {
+        setStatus("sprawny");
+        System.out.println("Sprzęt " + typ + " został naprawiony.");
     }
 }

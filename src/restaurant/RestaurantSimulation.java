@@ -20,16 +20,16 @@ public class RestaurantSimulation {
     private static int czasSymulacji;
     private static CustomerQueue customerQueue;
     private static boolean kitchenOperational = true;
-    private static int czasSymulacjiMs = 30000; // Czas trwania symulacji w milisekundach
+    private static int czasSymulacjiMs = 100000; // Czas trwania symulacji w milisekundach
     private static boolean simulationStopped = false; // Flaga do kontroli zakończenia symulacji
 
     // Dodane zmienne do kontroli czasu
     private static int czasSpedzonyPrzyStolikuMin = 5000;
     private static int czasSpedzonyPrzyStolikuMax = 10000;
-    private static int czasDostawyZasobowMin = 5000; // Minimalny czas dostawy zasobów w ms
-    private static int czasDostawyZasobowMax = 10000; // Maksymalny czas dostawy zasobów w ms
+    private static int czasDostawyZasobowMin = 10000; // Minimalny czas dostawy zasobów w ms
+    private static int czasDostawyZasobowMax = 30000; // Maksymalny czas dostawy zasobów w ms
     private static int czasPojawieniaSieNowegoKlientaMin = 2000; // Minimalny czas pojawienia się nowego klienta w ms
-    private static int czasPojawieniaSieNowegoKlientaMax = 5000; // Maksymalny czas pojawienia się nowego klienta w ms
+    private static int czasPojawieniaSieNowegoKlientaMax = 3000; // Maksymalny czas pojawienia się nowego klienta w ms
 
     public static void initSimulation() {
         listaZamowien = new ArrayList<>();
@@ -49,33 +49,42 @@ public class RestaurantSimulation {
         listaZapasow = new Inventory(initialSupplies);
 
         // Dodawanie przykładowych pracowników
-        Manager manager = new Manager(1, "Jan", "Manager", getRandomFloat(-5, 5), listaPracownikow);
-        Waiter waiter = new Waiter(2, "Anna", "Waiter", getRandomFloat(-5, 5), listaStolikow);
-        Cook cook = new Cook(3, "Krzysztof", "Cook", getRandomFloat(-5, 5));
+        Manager manager = new Manager(1, "Jan", "Manager", getRandomFloat(1, 3), listaPracownikow);
+        Waiter waiter = new Waiter(2, "Anna", "Waiter", getRandomFloat(1, 3), listaStolikow);
+        Cook cook = new Cook(3, "Krzysztof", "Cook", getRandomFloat(1, 3));
 
         listaPracownikow.add(manager);
         listaPracownikow.add(waiter);
         listaPracownikow.add(cook);
 
         // Dodawanie przykładowych stolików
-        Table table1 = new Table(1, "wolny");
-        Table table2 = new Table(2, "wolny");
+        Table table1 = new Table(1);
+        Table table2 = new Table(2);
         listaStolikow.add(table1);
         listaStolikow.add(table2);
 
         // Dodawanie przykładowego sprzętu
         Equipment oven = new Equipment(1, "Piecyk", "sprawny");
-        Equipment fridge = new Equipment(2, "Lodowka", "sprawny");
+        Equipment fridge = new Equipment(2, "Lodówka", "sprawny");
         listaSprzetu.add(oven);
         listaSprzetu.add(fridge);
 
-        System.out.println("Symulacja zostala zainicjowana.");
+        System.out.println("Symulacja została zainicjowana.");
     }
 
     public static void startSimulation() {
-        // Uruchomienie timera do obsługi nowych klientów i dodawania zapasów
+        // Uruchomienie timera do obsługi nowych klientów
         timer.schedule(new RestaurantTimerTask(new RestaurantSimulation()), 0, getRandomCustomerInterval());
-        timer.schedule(new SupplyTimerTask(), 0, getRandomSupplyInterval());
+
+        // Uruchomienie timera dla pracowników
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                for (Employee pracownik : listaPracownikow) {
+                    pracownik.wykonajZadanie();
+                }
+            }
+        }, 0, 5000); // Pracownicy wykonują swoje zadania co 5 sekund
 
         // Uruchomienie timera, który zakończy symulację po określonym czasie
         simulationEndTimer.schedule(new TimerTask() {
@@ -85,7 +94,7 @@ public class RestaurantSimulation {
             }
         }, czasSymulacjiMs);
 
-        System.out.println("Symulacja restauracji zostala uruchomiona.");
+        System.out.println("Symulacja restauracji została uruchomiona.");
     }
 
     private static float getTotalEmployeeEfficiency() {
@@ -98,20 +107,20 @@ public class RestaurantSimulation {
 
     public void handleNewCustomer() {
         if (!kitchenOperational || simulationStopped) {
-            System.out.println("Kuchnia nie działa z powodu awarii sprzetu lub symulacja zostala zatrzymana.");
+            System.out.println("Kuchnia nie działa z powodu awarii sprzętu lub symulacja została zatrzymana.");
             return;
         }
 
         int tableIndex = -1;
         for (int i = 0; i < listaStolikow.size(); i++) {
-            if ("wolny".equals(listaStolikow.get(i).getStatus())) {
+            if (!listaStolikow.get(i).isOccupied()) {
                 tableIndex = i;
                 break;
             }
         }
 
         customerQueue.addCustomer();
-        System.out.println("Liczba klientow w kolejce: " + customerQueue.getQueueSize());
+        System.out.println("Liczba klientów w kolejce: " + customerQueue.getQueueSize());
 
         if (tableIndex != -1 && customerQueue.getQueueSize() > 0) {
             customerQueue.removeCustomer();
@@ -121,10 +130,11 @@ public class RestaurantSimulation {
             int dishType = random.nextInt(3) + 1;
             Order order = new Order(listaZamowien.size() + 1, generateRandomOrder(dishType), "nowe");
             listaZamowien.add(order);
-            System.out.println("Nowe zamowienie przy stoliku " + table.getNumerStolika());
+            System.out.println("Nowe zamówienie przy stoliku " + table.getTableId());
 
-            // Przypisanie zamówienia pracownikowi do wykonania
-            for (Employee pracownik : listaPracownikow) {
+            // Przypisanie zamówienia pierwszemu dostępnemu pracownikowi do wykonania
+            if (!listaPracownikow.isEmpty()) {
+                Employee pracownik = listaPracownikow.get(0); // Pobierz pierwszego pracownika z listy
                 pracownik.przygotujZamowienie(order);
             }
 
@@ -135,20 +145,15 @@ public class RestaurantSimulation {
                 float efficiencyImpact = 1 - (totalEfficiency / 100);
                 int czasSpedzonyPrzyStoliku = (int)((czasSpedzonyPrzyStolikuMin + random.nextInt(czasSpedzonyPrzyStolikuMax - czasSpedzonyPrzyStolikuMin)) * efficiencyImpact);
 
-                new Timer().schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        table.releaseTable();
-                        order.setStatus("gotowe"); // Zmiana statusu zamówienia na "gotowe"
-                        System.out.println("Stolik " + table.getNumerStolika() + " zostal zwolniony.");
-                    }
-                }, czasSpedzonyPrzyStoliku);
+                // Zaplanowanie zwolnienia stolika
+                table.scheduleRelease(czasSpedzonyPrzyStoliku);
+                order.setStatus("gotowe"); // Zmiana statusu zamówienia na "gotowe"
             } else {
-                order.setStatus("oczekujace");
-                System.out.println("Klient czeka na dostawe zapasow.");
+                order.setStatus("oczekujące");
+                System.out.println("Klient czeka na dostawę zapasów.");
             }
         } else {
-            System.out.println("Brak wolnych stolikow dla nowych klientow.");
+            System.out.println("Brak wolnych stolików dla nowych klientów.");
         }
 
         // Symulacja upływu czasu i awarie sprzętu
@@ -156,20 +161,20 @@ public class RestaurantSimulation {
         if (random.nextFloat() < wspolczynnikAwarii) {
             Equipment equipment = listaSprzetu.get(random.nextInt(listaSprzetu.size()));
             equipment.setStatus("uszkodzony");
-            System.out.println("Sprzet " + equipment.getTyp() + " ulegl awarii.");
+            System.out.println("Sprzęt " + equipment.getTyp() + " uległ awarii.");
             repairEquipment(equipment);
         }
     }
 
     private void repairEquipment(Equipment equipment) {
         kitchenOperational = false;
-        System.out.println("Naprawa sprzetu " + equipment.getTyp() + " rozpoczeta.");
+        System.out.println("Naprawa sprzętu " + equipment.getTyp() + " rozpoczęta.");
         new Timer().schedule(new TimerTask() {
             @Override
             public void run() {
                 equipment.repair();
                 kitchenOperational = true;
-                System.out.println("Naprawa sprzetu " + equipment.getTyp() + " zakonczona. Kuchnia ponownie dziala.");
+                System.out.println("Naprawa sprzętu " + equipment.getTyp() + " zakończona. Kuchnia ponownie działa.");
             }
         }, 5000); // Symulacja czasu naprawy (5 sekund)
     }
@@ -182,37 +187,40 @@ public class RestaurantSimulation {
         timer.cancel();
         simulationEndTimer.cancel();
         generateReport();
-        System.out.println("Symulacja zakonczona.");
+        System.out.println("Symulacja zakończona.");
         System.exit(0);
     }
 
     public static void generateReport() {
         System.out.println("=== Raport z symulacji restauracji ===");
-        System.out.println("Stan zapasow:");
+        System.out.println("Stan zapasów:");
         listaZapasow.checkStock();
 
-        System.out.println("Statusy zamówien:");
+        System.out.println("Statusy zamówień:");
         for (Order zamowienie : listaZamowien) {
-            System.out.println(" - Zamowienie " + zamowienie.getIdZamowienia() + ": " + zamowienie.getStatus());
+            System.out.println(" - Zamówienie " + zamowienie.getIdZamowienia() + ": " + zamowienie.getStatus());
         }
 
-        System.out.println("Statusy stolikow:");
+        System.out.println("Statusy stolików:");
         for (Table stolik : listaStolikow) {
-            System.out.println(" - Stolik " + stolik.getNumerStolika() + ": " + stolik.getStatus());
+            System.out.println(" - Stolik " + stolik.getTableId() + ": " + stolik.isOccupied());
         }
 
-        System.out.println("Statusy sprzetu:");
+        System.out.println("Statusy sprzętu:");
         for (Equipment sprzet : listaSprzetu) {
-            System.out.println(" - Sprzet " + sprzet.getTyp() + ": " + sprzet.getStatus());
+            System.out.println(" - Sprzęt " + sprzet.getTyp() + ": " + sprzet.getStatus());
         }
 
-        System.out.println("Efektywnosc pracownikow:");
+        System.out.println("Efektywność pracowników:");
         for (Employee pracownik : listaPracownikow) {
-            System.out.println(" - " + pracownik.getImie() + " (" + pracownik.getStanowisko() + "): Efektywnosc pracy = " + pracownik.getEfektywnosc());
+            System.out.println(" - " + pracownik.getImie() + " (" + pracownik.getStanowisko() + "): Efektywność pracy = " + pracownik.getEfektywnosc());
+            if (pracownik instanceof Waiter) {
+                System.out.println("    Napiwki: " + ((Waiter) pracownik).getNapiwki());
+            }
         }
 
         System.out.println("Czas trwania symulacji: " + czasSymulacji + " ms");
-        System.out.println("Liczba klientow w kolejce na koniec symulacji: " + customerQueue.getQueueSize());
+        System.out.println("Liczba klientów w kolejce na koniec symulacji: " + customerQueue.getQueueSize());
     }
 
     private static float getRandomFloat(float min, float max) {
@@ -232,12 +240,24 @@ public class RestaurantSimulation {
         return czasPojawieniaSieNowegoKlientaMin + random.nextInt(czasPojawieniaSieNowegoKlientaMax - czasPojawieniaSieNowegoKlientaMin);
     }
 
-    private static long getRandomSupplyInterval() {
+    public static long getRandomSupplyInterval() {
         return czasDostawyZasobowMin + random.nextInt(czasDostawyZasobowMax - czasDostawyZasobowMin);
     }
 
-    public static void addSupplies(int amount) {
-        listaZapasow.addSupplies(amount);
+    public static Inventory getInventory() {
+        return listaZapasow;
+    }
+
+    public static List<Table> getTables() {
+        return listaStolikow;
+    }
+
+    public static List<Equipment> getEquipment() {
+        return listaSprzetu;
+    }
+
+    public static List<Order> getOrders() {
+        return listaZamowien;
     }
 
     public static void main(String[] args) {

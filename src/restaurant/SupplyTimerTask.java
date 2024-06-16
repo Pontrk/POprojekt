@@ -8,7 +8,5 @@ public class SupplyTimerTask extends TimerTask {
 
     @Override
     public void run() {
-        int amount = random.nextInt(2) + 1; // Dodajemy od 1 do 2 jednostek zapasów
-        RestaurantSimulation.addSupplies(amount);
     }
 }

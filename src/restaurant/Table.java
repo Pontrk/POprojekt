@@ -1,29 +1,43 @@
 package restaurant;
 
-public class Table {
-    private int numerStolika;
-    private String status;
+import java.util.Timer;
+import java.util.TimerTask;
 
-    public Table(int numerStolika, String status) {
-        this.numerStolika = numerStolika;
-        this.status = status;
+public class Table {
+    private int idStolika;
+    private boolean occupied;
+    private Timer releaseTimer;
+
+    public Table(int idStolika) {
+        this.idStolika = idStolika;
+        this.occupied = false;
+        this.releaseTimer = new Timer();
+    }
+
+    public int getTableId() {
+        return idStolika;
+    }
+
+    public boolean isOccupied() {
+        return occupied;
     }
 
     public void assignGuest() {
-        this.status = "zajety";
-        System.out.println("Przypisanie goscia do stolika " + numerStolika);
+        occupied = true;
+        System.out.println("Stolik " + idStolika + " został przypisany do gościa.");
     }
 
     public void releaseTable() {
-        this.status = "wolny";
-        System.out.println("Zwolnienie stolika " + numerStolika);
+        occupied = false;
+        System.out.println("Stolik " + idStolika + " został zwolniony.");
     }
 
-    public int getNumerStolika() {
-        return numerStolika;
-    }
-
-    public String getStatus() {
-        return status;
+    public void scheduleRelease(long delay) {
+        releaseTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                releaseTable();
+            }
+        }, delay);
     }
 }

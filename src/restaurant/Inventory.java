@@ -3,31 +3,31 @@ package restaurant;
 public class Inventory {
     private int supplies;
 
-    public Inventory(int initialSupplies) {
-        this.supplies = initialSupplies;
+    public Inventory(int supplies) {
+        this.supplies = supplies;
     }
 
-    public void checkStock() {
-        System.out.println("Stan zapasow: " + supplies);
-    }
-
-    public void addSupplies(int amount) {
-        supplies += amount;
-        System.out.println("Dodano " + amount + " jednostek zapasow. Obecny stan: " + supplies);
+    public int getTotalSupplies() {
+        return supplies;
     }
 
     public boolean consumeSupplies(int amount) {
         if (supplies >= amount) {
             supplies -= amount;
-            System.out.println("Zuzyto " + amount + " jednostek zapasow. Pozostalo: " + supplies);
+            System.out.println("Zużyto " + amount + " jednostek zapasów. Pozostało: " + supplies);
             return true;
         } else {
-            System.out.println("Brak wystarczajacych zapasow do zuzycia " + amount + " jednostek.");
+            System.out.println("Niewystarczająca ilość zapasów.");
             return false;
         }
     }
 
-    public int getSupplies() {
-        return supplies;
+    public void addSupplies(int amount) {
+        supplies += amount;
+        System.out.println("Dodano " + amount + " jednostek zapasów. Aktualna ilość: " + supplies);
+    }
+
+    public void checkStock() {
+        System.out.println("Aktualna ilość zapasów: " + supplies);
     }
 }
